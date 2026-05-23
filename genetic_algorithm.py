@@ -123,10 +123,8 @@ class GeneticAlgorithm:
                 best_overall_fitness = current_best_fitness
                 best_overall_chromosome = current_best_chromosome
 
-            # Imprime o progresso (a cada 10 gerações)
-            if generation % 10 == 0 or generation == self.generations - 1:
-                # Mostramos o melhor da geração e o melhor absoluto para acompanhar a evolução
-                print(f"Geração {generation:04d} | Melhor da Gen: {current_best_fitness} | Melhor Global: {best_overall_fitness}")
+            # Mostramos o melhor da geração e o melhor absoluto para acompanhar a evolução
+            print(f"Geração {generation:04d} | Melhor da Gen: {current_best_fitness} | Melhor Global: {best_overall_fitness}")
 
             # Criação da Próxima Geração
             new_population = []
@@ -157,7 +155,6 @@ class GeneticAlgorithm:
             # Corta o cromossomo mantendo apenas os passos estritamente necessários
             trimmed_chromosome = best_overall_chromosome[:moves_used]
             
-            print(f"A primeira solução pode ter sido longa, mas a melhor encontrada precisa de apenas {len(trimmed_chromosome)} passos!")
             return trimmed_chromosome
         else:
             print(f"\nO algoritmo rodou todas as gerações, mas não resolveu o puzzle completamente. Melhor fitness: {best_overall_fitness}")

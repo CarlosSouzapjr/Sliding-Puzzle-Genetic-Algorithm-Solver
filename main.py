@@ -36,6 +36,9 @@ ag = GeneticAlgorithm(
 # Roda a evolução!
 melhor_solucao = ag.run()
 
+if melhor_solucao is not None:
+    melhor_solucao = [str(move) for move in melhor_solucao] # convertendo np.str para string legível
+
 print("\nMelhor sequência de movimentos encontrada:")
 print(melhor_solucao)
 
