@@ -19,9 +19,9 @@ jogo = copy.deepcopy(jogo)
 
 # Hiperparâmetros do Algoritmo Genético
 tamanho_populacao = 100
-tamanho_cromossomo = 100   # Número máximo de movimentos permitidos na solução
+tamanho_cromossomo = 100   # Número máximo de movimentos permitidos na solução (Tem que ser maior que o número de mover do randomizer para garantir que exista uma solução possível)
 taxa_mutacao = 0.05       # 5% de chance de mutação por gene
-max_geracoes = 500
+max_geracoes = 100
 
 ag = GeneticAlgorithm(
     population_size=tamanho_populacao,

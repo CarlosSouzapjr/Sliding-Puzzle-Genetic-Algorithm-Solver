@@ -146,15 +146,16 @@ class GeneticAlgorithm:
 
         # Verificar se a melhor solução global encontrada resolve o puzzle
         if best_overall_fitness >= 10000:
-            print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
-            
             # Matemática reversa para descobrir quantos movimentos foram úteis
             moves_used = int(self.chromosome_length - (best_overall_fitness - 10000))
             
             # Corta o cromossomo mantendo apenas os passos estritamente necessários
             trimmed_chromosome = best_overall_chromosome[:moves_used]
             
-            return trimmed_chromosome
+            final_chromosome = trimmed_chromosome
         else:
-            print(f"\nO algoritmo rodou todas as gerações, mas não resolveu o puzzle completamente. Melhor fitness: {best_overall_fitness}")
-            return best_overall_chromosome
+            final_chromosome = best_overall_chromosome
+        
+        print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
+        
+        return final_chromosome
