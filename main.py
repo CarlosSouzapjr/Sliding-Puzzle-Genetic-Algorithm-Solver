@@ -1,6 +1,7 @@
 from game_logic import GameLogic
 from genetic_algorithm import GeneticAlgorithm
 import copy
+
 # Define o tamanho do puzzle (ex: 3x3)
 tamanho_puzzle = 5
 
@@ -22,7 +23,6 @@ tamanho_cromossomo = 100   # Número máximo de movimentos permitidos na soluç�
 taxa_mutacao = 0.05       # 5% de chance de mutação por gene
 max_geracoes = 500
 
-# Instancia o AG
 ag = GeneticAlgorithm(
     population_size=tamanho_populacao,
     chromosome_length=tamanho_cromossomo,
@@ -31,13 +31,13 @@ ag = GeneticAlgorithm(
     problem=jogo
 )
 
-# Roda a evolução!
+# Roda o AG para encontrar a melhor solução
 melhor_solucao = ag.run()
 
 if melhor_solucao is not None:
     melhor_solucao = [str(move) for move in melhor_solucao] # convertendo np.str para string legível
 
-print("\nMelhor sequência de movimentos encontrada:")
+print(f"\nMelhor sequência de movimentos encontrada ({len(melhor_solucao)} movimentos):")
 print(melhor_solucao)
 
 if melhor_solucao is None:
@@ -45,6 +45,6 @@ if melhor_solucao is None:
 else:
     # Jogar os movimentos encontrados para verificar o resultado
     jogo.play_moves(melhor_solucao)
-    print("Tabuleiro após aplicar os movimentos:")
+    print("\nTabuleiro após aplicar os movimentos:\n")
     print(jogo.board)
     print("Resolvido:", jogo.is_solved())

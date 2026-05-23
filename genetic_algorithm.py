@@ -144,8 +144,7 @@ class GeneticAlgorithm:
 
             population = new_population
 
-        # --- FINAL DO ALGORITMO (PÓS-LOOP) ---
-        # Verificamos se a melhor solução global encontrada resolve o puzzle
+        # Verificar se a melhor solução global encontrada resolve o puzzle
         if best_overall_fitness >= 10000:
             print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
             
