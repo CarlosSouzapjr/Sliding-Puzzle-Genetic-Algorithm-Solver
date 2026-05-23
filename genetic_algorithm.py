@@ -96,62 +96,69 @@ class GeneticAlgorithm:
     
     def run(self):
         """
-        Executa o loop principal do Algoritmo Genético.
+        Executa o loop do Algoritmo Genético por todas as gerações,
+        buscando otimizar o tamanho da solução.
         """
         print("Iniciando o Algoritmo Genético...")
         
-        # 1. Inicializa a primeira população aleatória
+        # Inicializa a primeira população aleatória
         population = self.create_population()
         
         best_overall_chromosome = None
         best_overall_fitness = -1
 
         for generation in range(self.generations):
-            # 2. Avalia o fitness de todos os indivíduos da população
+            # Avalia o fitness de todos os indivíduos da população
             fitness_scores = [self.calculate_fitness(chrom) for chrom in population]
             
-            # 3. Encontra o melhor indivíduo da geração atual
+            # Encontra o melhor indivíduo da geração atual
             current_best_idx = np.argmax(fitness_scores)
             current_best_chromosome = population[current_best_idx]
             current_best_fitness = fitness_scores[current_best_idx]
 
-            # Atualiza o recorde global
+            # ATUALIZA O RECORDE GLOBAL:
+            # Como menor número de passos = maior fitness, isso garante 
+            # que guardaremos sempre a solução MAIS CURTA encontrada até aqui.
             if current_best_fitness > best_overall_fitness:
                 best_overall_fitness = current_best_fitness
                 best_overall_chromosome = current_best_chromosome
 
-            # Imprime o progresso (a cada 10 gerações para não floodar o terminal)
+            # Imprime o progresso (a cada 10 gerações)
             if generation % 10 == 0 or generation == self.generations - 1:
-                print(f"Geração {generation:04d} | Melhor Fitness: {current_best_fitness}")
+                # Mostramos o melhor da geração e o melhor absoluto para acompanhar a evolução
+                print(f"Geração {generation:04d} | Melhor da Gen: {current_best_fitness} | Melhor Global: {best_overall_fitness}")
 
-
-            # 5. Criação da Próxima Geração
+            # Criação da Próxima Geração
             new_population = []
 
-            # ELITISMO: Salva o melhor indivíduo intacto (sem mutação/cruzamento)
-            # Isso garante que a nossa melhor solução nunca seja perdida por azar
+            # ELITISMO: Mantém o melhor da geração atual para a próxima
             new_population.append(current_best_chromosome)
 
             # Preenche o resto da população
             while len(new_population) < self.population_size:
-                # Seleciona dois pais via Torneio
                 parent1 = self.tournament_selection(population, fitness_scores)
                 parent2 = self.tournament_selection(population, fitness_scores)
-
-                # Cruza os pais para gerar dois filhos
                 child1, child2 = self.crossover(parent1, parent2)
-
-                # Aplica a mutação no primeiro filho e o adiciona à população
-                new_population.append(self.mutate(child1))
                 
-                # Checa o limite para não exceder o tamanho da população (caso seja ímpar)
+                new_population.append(self.mutate(child1))
                 if len(new_population) < self.population_size:
-                    # Aplica a mutação no segundo filho e o adiciona
                     new_population.append(self.mutate(child2))
 
-            # A nova geração substitui a antiga
             population = new_population
 
-        # Se o loop terminar sem encontrar a solução perfeita
-        print(f"Melhor fitness alcançado: {best_overall_fitness}")
-        return best_overall_chromosome
+        # --- FINAL DO ALGORITMO (PÓS-LOOP) ---
+        # Verificamos se a melhor solução global encontrada resolve o puzzle
+        if best_overall_fitness >= 10000:
+            print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
+            
+            # Matemática reversa para descobrir quantos movimentos foram úteis
+            moves_used = int(self.chromosome_length - (best_overall_fitness - 10000))
+            
+            # Corta o cromossomo mantendo apenas os passos estritamente necessários
+            trimmed_chromosome = best_overall_chromosome[:moves_used]
+            
+            print(f"A primeira solução pode ter sido longa, mas a melhor encontrada precisa de apenas {len(trimmed_chromosome)} passos!")
+            return trimmed_chromosome
+        else:
+            print(f"\nO algoritmo rodou todas as gerações, mas não resolveu o puzzle completamente. Melhor fitness: {best_overall_fitness}")
+            return best_overall_chromosome
