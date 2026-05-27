@@ -94,12 +94,13 @@ class GeneticAlgorithm:
         
         return population[winner_global_index]
     
-    def run(self):
+    def run(self, progress_callback=None, verbose=True):
         """
         Executa o loop do Algoritmo Genético por todas as gerações,
         buscando otimizar o tamanho da solução.
         """
-        print("Iniciando o Algoritmo Genético...")
+        if verbose:
+            print("Iniciando o Algoritmo Genético...")
         
         # Inicializa a primeira população aleatória
         population = self.create_population()
@@ -123,8 +124,17 @@ class GeneticAlgorithm:
                 best_overall_fitness = current_best_fitness
                 best_overall_chromosome = current_best_chromosome
 
+            if progress_callback is not None:
+                progress_callback({
+                    "generation": generation,
+                    "current_best_fitness": current_best_fitness,
+                    "best_overall_fitness": best_overall_fitness,
+                    "best_moves_count": len(best_overall_chromosome),
+                })
+
             # Mostramos o melhor da geração e o melhor absoluto para acompanhar a evolução
-            print(f"Geração {generation:04d} | Melhor da Gen: {current_best_fitness} | Melhor Global: {best_overall_fitness}")
+            if verbose:
+                print(f"Geração {generation:04d} | Melhor da Gen: {current_best_fitness} | Melhor Global: {best_overall_fitness}")
 
             # Criação da Próxima Geração
             new_population = []
@@ -156,6 +166,9 @@ class GeneticAlgorithm:
         else:
             final_chromosome = best_overall_chromosome
         
-        print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
+        self.best_overall_fitness = best_overall_fitness
+
+        if verbose:
+            print(f"\n>>> FIM DAS GERAÇÕES! Melhor solução encontrada com fitness: {best_overall_fitness} <<<")
         
         return final_chromosome
