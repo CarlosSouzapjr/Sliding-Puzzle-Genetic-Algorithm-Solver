@@ -15,8 +15,8 @@ CHROMOSOME_LENGTH = 100
 MUTATION_RATE = 0.05
 GENERATIONS = 100
 
-WINDOW_WIDTH = 980
-WINDOW_HEIGHT = 760
+WINDOW_WIDTH = 1180
+WINDOW_HEIGHT = 840
 FPS = 60
 BOARD_PIXELS = 600
 TILE_GAP = 6
@@ -68,6 +68,47 @@ class Button:
             self.action()
 
 
+@dataclass
+class TextInput:
+    label: str
+    value: str
+    rect: pygame.Rect
+    active: bool = False
+
+    def draw(self, screen, label_font, value_font, enabled=True):
+        label_surface = label_font.render(self.label, True, MUTED if enabled else DISABLED)
+        screen.blit(label_surface, (self.rect.x, self.rect.y - 22))
+
+        border = ACCENT if self.active and enabled else PANEL_LIGHT
+        fill = (28, 31, 38) if enabled else PANEL
+        pygame.draw.rect(screen, fill, self.rect, border_radius=6)
+        pygame.draw.rect(screen, border, self.rect, width=2, border_radius=6)
+
+        value_surface = value_font.render(self.value, True, TEXT if enabled else DISABLED)
+        screen.blit(value_surface, (self.rect.x + 10, self.rect.y + 9))
+
+    def handle_event(self, event, enabled=True):
+        if not enabled:
+            self.active = False
+            return
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.active = self.rect.collidepoint(event.pos)
+            return
+
+        if not self.active or event.type != pygame.KEYDOWN:
+            return
+
+        if event.key == pygame.K_BACKSPACE:
+            self.value = self.value[:-1]
+        elif event.key in (pygame.K_RETURN, pygame.K_TAB, pygame.K_ESCAPE):
+            self.active = False
+        elif len(self.value) < 10 and event.unicode in "0123456789.":
+            if event.unicode == "." and "." in self.value:
+                return
+            self.value += event.unicode
+
+
 class SlidingPuzzleApp:
     def __init__(self):
         pygame.init()
@@ -79,10 +120,19 @@ class SlidingPuzzleApp:
         self.small_font = pygame.font.SysFont("segoeui", 18)
         self.big_font = pygame.font.SysFont("segoeui", 34, bold=True)
 
-        self.board_origin = ((WINDOW_WIDTH - BOARD_PIXELS) // 2, 118)
-        self.tile_size = BOARD_PIXELS // PUZZLE_SIZE
+        self.config = {
+            "puzzle_size": PUZZLE_SIZE,
+            "randomize_moves": RANDOMIZE_MOVES,
+            "population_size": POPULATION_SIZE,
+            "chromosome_length": CHROMOSOME_LENGTH,
+            "mutation_rate": MUTATION_RATE,
+            "generations": GENERATIONS,
+        }
 
-        self.solved_game = GameLogic(PUZZLE_SIZE)
+        self.board_origin = (40, 118)
+        self.tile_size = BOARD_PIXELS // self.config["puzzle_size"]
+
+        self.solved_game = GameLogic(self.config["puzzle_size"])
         self.problem_game = copy.deepcopy(self.solved_game)
         self.visual_game = copy.deepcopy(self.problem_game)
 
@@ -103,6 +153,7 @@ class SlidingPuzzleApp:
         self.animation = None
         self.is_animating = False
 
+        self.inputs = self.create_inputs()
         self.buttons = self.create_buttons()
         self.randomize_puzzle()
 
@@ -111,7 +162,7 @@ class SlidingPuzzleApp:
         width = 132
         height = 44
         gap = 14
-        start_x = (WINDOW_WIDTH - (width * 4 + gap * 3)) // 2
+        start_x = 340
         labels_actions = [
             ("Embaralhar", self.randomize_puzzle),
             ("Resolver", self.start_solver),
@@ -125,13 +176,42 @@ class SlidingPuzzleApp:
             buttons.append(Button(label, rect, action))
         return buttons
 
+    def create_inputs(self):
+        x = 710
+        y = 196
+        width = 132
+        height = 40
+        row_gap = 78
+        col_gap = 172
+        fields = [
+            ("Tamanho", "puzzle_size"),
+            ("Embaralhar", "randomize_moves"),
+            ("Populacao", "population_size"),
+            ("Cromossomo", "chromosome_length"),
+            ("Mutacao", "mutation_rate"),
+            ("Geracoes", "generations"),
+        ]
+
+        inputs = {}
+        for index, (label, key) in enumerate(fields):
+            col = index % 2
+            row = index // 2
+            rect = pygame.Rect(x + col * col_gap, y + row * row_gap, width, height)
+            inputs[key] = TextInput(label, str(self.config[key]), rect)
+        return inputs
+
     def randomize_puzzle(self):
         if self.is_solving or self.is_animating:
             return
 
-        self.problem_game = GameLogic(PUZZLE_SIZE)
-        self.problem_game.randomize(moves=RANDOMIZE_MOVES)
+        if not self.apply_config_from_inputs():
+            return
+
+        self.solved_game = GameLogic(self.config["puzzle_size"])
+        self.problem_game = GameLogic(self.config["puzzle_size"])
+        self.problem_game.randomize(moves=self.config["randomize_moves"])
         self.visual_game = copy.deepcopy(self.problem_game)
+        self.tile_size = BOARD_PIXELS // self.config["puzzle_size"]
         self.solution_moves = []
         self.solution_fitness = None
         self.solution_solves = False
@@ -144,8 +224,13 @@ class SlidingPuzzleApp:
         if self.is_solving or self.is_animating:
             return
 
+        if not self.apply_config_from_inputs():
+            return
+
+        self.solved_game = GameLogic(self.config["puzzle_size"])
         self.problem_game = copy.deepcopy(self.solved_game)
         self.visual_game = copy.deepcopy(self.problem_game)
+        self.tile_size = BOARD_PIXELS // self.config["puzzle_size"]
         self.solution_moves = []
         self.solution_fitness = None
         self.solution_solves = False
@@ -163,9 +248,55 @@ class SlidingPuzzleApp:
                 "best_moves_count": 0,
             }
 
+    def apply_config_from_inputs(self):
+        try:
+            new_config = {
+                "puzzle_size": int(self.inputs["puzzle_size"].value),
+                "randomize_moves": int(self.inputs["randomize_moves"].value),
+                "population_size": int(self.inputs["population_size"].value),
+                "chromosome_length": int(self.inputs["chromosome_length"].value),
+                "mutation_rate": float(self.inputs["mutation_rate"].value),
+                "generations": int(self.inputs["generations"].value),
+            }
+        except ValueError:
+            self.status = "Confira os parametros: use apenas numeros validos."
+            return False
+
+        if not 2 <= new_config["puzzle_size"] <= 8:
+            self.status = "Tamanho deve ficar entre 2 e 8."
+            return False
+        if new_config["randomize_moves"] < 0:
+            self.status = "Embaralhar deve ser 0 ou maior."
+            return False
+        if new_config["population_size"] < 3:
+            self.status = "Populacao deve ser pelo menos 3."
+            return False
+        if new_config["chromosome_length"] < 3:
+            self.status = "Cromossomo deve ser pelo menos 3."
+            return False
+        if not 0 <= new_config["mutation_rate"] <= 1:
+            self.status = "Mutacao deve ficar entre 0 e 1."
+            return False
+        if new_config["generations"] < 1:
+            self.status = "Geracoes deve ser pelo menos 1."
+            return False
+
+        self.config = new_config
+        return True
+
     def start_solver(self):
         if self.is_solving or self.is_animating:
             return
+
+        previous_size = self.problem_game.size
+        if not self.apply_config_from_inputs():
+            return
+
+        if previous_size != self.config["puzzle_size"]:
+            self.solved_game = GameLogic(self.config["puzzle_size"])
+            self.problem_game = GameLogic(self.config["puzzle_size"])
+            self.problem_game.randomize(moves=self.config["randomize_moves"])
+            self.tile_size = BOARD_PIXELS // self.config["puzzle_size"]
 
         self.is_solving = True
         self.solution_moves = []
@@ -185,10 +316,10 @@ class SlidingPuzzleApp:
                 self.progress = data
 
         ag = GeneticAlgorithm(
-            population_size=POPULATION_SIZE,
-            chromosome_length=CHROMOSOME_LENGTH,
-            mutation_rate=MUTATION_RATE,
-            generations=GENERATIONS,
+            population_size=self.config["population_size"],
+            chromosome_length=self.config["chromosome_length"],
+            mutation_rate=self.config["mutation_rate"],
+            generations=self.config["generations"],
             problem=solver_problem,
         )
 
@@ -276,11 +407,11 @@ class SlidingPuzzleApp:
         row, col = empty_pos
         if move == "up" and row > 0:
             return row - 1, col
-        if move == "down" and row < PUZZLE_SIZE - 1:
+        if move == "down" and row < self.config["puzzle_size"] - 1:
             return row + 1, col
         if move == "left" and col > 0:
             return row, col - 1
-        if move == "right" and col < PUZZLE_SIZE - 1:
+        if move == "right" and col < self.config["puzzle_size"] - 1:
             return row, col + 1
         return None
 
@@ -296,6 +427,7 @@ class SlidingPuzzleApp:
         self.screen.fill(BG)
         self.draw_header()
         self.draw_board()
+        self.draw_config_panel()
         self.draw_status_panel()
 
         for button in self.buttons:
@@ -308,8 +440,10 @@ class SlidingPuzzleApp:
         self.screen.blit(title, (32, 34))
 
         params = (
-            f"{PUZZLE_SIZE}x{PUZZLE_SIZE} | Pop {POPULATION_SIZE} | "
-            f"Crom {CHROMOSOME_LENGTH} | Ger {GENERATIONS}"
+            f"{self.config['puzzle_size']}x{self.config['puzzle_size']} | "
+            f"Pop {self.config['population_size']} | "
+            f"Crom {self.config['chromosome_length']} | "
+            f"Ger {self.config['generations']}"
         )
         params_surface = self.small_font.render(params, True, MUTED)
         self.screen.blit(params_surface, (32, 72))
@@ -327,14 +461,15 @@ class SlidingPuzzleApp:
         if self.animation is not None:
             skip_cell = self.animation["to"]
 
-        for row in range(PUZZLE_SIZE):
-            for col in range(PUZZLE_SIZE):
+        puzzle_size = self.config["puzzle_size"]
+        for row in range(puzzle_size):
+            for col in range(puzzle_size):
                 if skip_cell == (row, col):
                     self.draw_empty_cell(row, col)
                     continue
 
                 value = int(self.visual_game.board[row, col])
-                if value == PUZZLE_SIZE * PUZZLE_SIZE:
+                if value == puzzle_size * puzzle_size:
                     self.draw_empty_cell(row, col)
                 else:
                     self.draw_tile(value, row, col)
@@ -358,6 +493,17 @@ class SlidingPuzzleApp:
         number = self.font.render(str(value), True, TILE_TEXT)
         number_rect = number.get_rect(center=rect.center)
         self.screen.blit(number, number_rect)
+
+    def draw_config_panel(self):
+        panel_rect = pygame.Rect(690, 118, 452, 330)
+        pygame.draw.rect(self.screen, PANEL, panel_rect, border_radius=10)
+
+        title = self.font.render("Parametros", True, TEXT)
+        self.screen.blit(title, (panel_rect.x + 20, panel_rect.y + 18))
+
+        enabled = not self.is_solving and not self.is_animating
+        for input_box in self.inputs.values():
+            input_box.draw(self.screen, self.small_font, self.small_font, enabled=enabled)
 
     def draw_moving_tile(self):
         data = self.animation
@@ -396,7 +542,7 @@ class SlidingPuzzleApp:
             fitness = progress["best_overall_fitness"]
 
         info = (
-            f"Geracao: {progress['generation']}/{GENERATIONS - 1}   "
+            f"Geracao: {progress['generation']}/{self.config['generations'] - 1}   "
             f"Melhor fitness: {fitness}   "
             f"Movimentos: {len(self.solution_moves) or progress['best_moves_count']}"
         )
@@ -411,6 +557,9 @@ class SlidingPuzzleApp:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                input_enabled = not self.is_solving and not self.is_animating
+                for input_box in self.inputs.values():
+                    input_box.handle_event(event, enabled=input_enabled)
                 for button in self.buttons:
                     button.handle_event(event)
 
